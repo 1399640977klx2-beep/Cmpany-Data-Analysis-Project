@@ -1,0 +1,15 @@
+PyQt6>=6.6,<7
+numpy>=1.24,<3
+pandas>=2.0,<3
+scipy>=1.10,<2
+matplotlib>=3.7,<4
+contourpy>=1.0,<2
+openpyxl>=3.1,<4
+lxml>=5,<7
+lmfit>=1.2,<2
+PyYAML>=6,<7
+pyqtgraph>=0.13,<1
+# Offline screenshot recognition; pin the adapter/model contract used by Writer.
+rapidocr==3.10.0
+onnxruntime==1.23.2
+opencv-python-headless==5.0.0.93

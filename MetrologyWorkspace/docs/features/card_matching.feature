@@ -1,0 +1,524 @@
+Feature: Build a card matching workbook
+  Metrology engineers need one reusable workflow for Reference and Raw Data
+  so that daily matching no longer depends on rebuilding an Excel workbook.
+
+  Rule: Workbook Type chooses the matching workflow
+    # Executed by tests/test_workbook_type.py.
+
+    Scenario: Choose a Type2 workbook
+      Given the engineer is creating a new Match Workbook
+      When the engineer selects Workbook Type Type2
+      Then no KLA, NOVA or TEM selection is shown
+      And Type2 appears in the workbook window title
+      And Reference identifies the reference curves and fit axis
+
+    # Executed by tests/test_id_matching.py and tests/test_type2_matching.py.
+    Scenario: Match shuffled sources with unequal record counts
+      Given a Type2 workbook with Reference and Raw Data in different orders and sizes
+      When corresponding ID fields are checked and ordered in both matching lists
+      Then the selected field tuples identify the paired records
+      And analysis and Trend retain the Raw Data row order
+      And unmatched Raw records have blank Reference values
+      And fitting and correlation use only valid paired observations
+      And both literal source tables remain unchanged
+
+    Scenario: Report ambiguous identities
+      Given a Type2 source contains duplicate IDs or blank key fields
+      When the engineer runs ID matching
+      Then those records are reported and remain unpaired
+      And no first row, averaging or positional fallback chooses a match
+
+    Scenario: Restore ID choices and protect independent analysis edits
+      Given a saved or recovered Type2 workbook with ordered ID fields
+      When the workbook is reopened or the parent source changes
+      Then the ordered ID choices are restored
+      And linked Reference data is recalculated by ID
+      And independently edited child data remains protected
+
+    # Executed by the matching-settings collapse cases in tests/test_type2_matching.py.
+    Scenario: Fold configured Type2 matching controls
+      Given the engineer has configured Type2 matching fields and parameter mappings
+      When Expand matching settings is unchecked
+      Then both ID lists and the parameter mapping controls are hidden
+      And the settings panel releases its vertical space
+      And Run analysis remains available with the existing settings
+      And no refit is triggered by folding or unfolding
+      And saving or recovering the Workbook retains the folded state
+      And old files without this setting open expanded
+
+    Scenario: Retain the workbook type across persistence and stages
+      Given a Type2 workbook
+      When the engineer saves, saves a copy, reopens, or recovers its draft
+      Then its Workbook Type remains Type2
+      And Preview and Final share that type
+
+    Scenario: Open an old workbook without a type field
+      Given a saved WKB or MWKB without workbook_type
+      When the engineer opens the workbook
+      Then it opens as Type1 without an unsaved change caused by the default
+      And the source file remains unchanged until an explicit save
+
+  Rule: Type2 Mark2 labels define shared hierarchical plot axes
+
+    # Executed by tests/test_type2_v51_integration.py.
+    Scenario: Use Type2 matching with v5.1 Spectra Info and Selection Script
+      Given Type2 Reference and Raw Data are shuffled and have different row counts
+      When Spectra Info reads the Workbook or its selection is copied to Spectra Viewer
+      Then Reference values and filter context follow the configured composite IDs
+      And unmatched Raw rows retain blank Reference values
+      And extra Reference rows do not extend TestFlag beyond Raw Data
+      And Source tables remain unchanged
+
+    Scenario: Classify metrics by one Mark2 label without losing Wafer classification
+      Given Mark2 includes Product and a custom label column called Wafer
+      When the engineer chooses a single imported label in Classify by
+      Then equal label values are pooled across Wafer identities for independent fitting
+      And detailed Trend and Bias plots keep the Mark2 hierarchy
+      And the custom Wafer label remains distinct from original Wafer grouping
+      And grouping choices and plot checks survive saving, reopening and recovery
+
+    # Executed by tests/test_mark2.py.
+    Scenario: Import source-linked Mark2 labels and choose a hierarchy
+      Given a Type2 workbook and a Mark2 Excel with eight identity columns, a blank separator and label columns
+      When the engineer enables Mark2 and imports the label table
+      Then Head and Mark cannot be enabled together with Mark2
+      And labels follow Raw identities even when imported records are reordered
+      And Groups offers Manage groups Mark2 to check fields and drag outer-to-inner order
+
+    Scenario: Keep source order or sort by the selected hierarchy
+      Given Mark2 labels are imported and one or more fields are checked
+      When the engineer chooses source Raw order or hierarchy order and clicks OK in Manage groups Mark2
+      Then Trend, Bias and Bias percent use the selected order and shared nested axis
+      And all related plots refresh without an additional Apply action
+      And the legacy Trend order control stays disabled while Mark2 is enabled
+      And Single-wafer and linked Trends use the same labels for their drawn rows
+      And unmatched Reference values leave gaps at their Raw positions
+      And literal source tables and fitted Card values are unchanged
+
+    Scenario: Persist and export Mark2
+      Given an applied Mark2 hierarchy
+      When the workbook is saved, reopened, recovered or exported
+      Then imported labels, enabled state, selected fields and ordering mode are retained
+      And native Excel and image charts use the same hierarchy and ordinal positions
+      And native label captions remain linked to visible worksheet cells
+
+  Rule: Reference defines the parameters that can be matched
+
+    Scenario: Preview two mapped parameters in one workbook
+      Given a Reference table with CD_Bot Reference and SPA Reference
+      And row-aligned Raw Data with CD_Bot and SPA
+      When the engineer runs a Preview match
+      Then one Card is reported for each mapped parameter
+      And trend and bias data use the Card-adjusted values
+
+    Scenario: Manually map a numeric Reference column without a suffix
+      Given a Reference table with Wafer ID, Die Seq, PMISH, TEM, and BIAS
+      And Raw Data whose matching parameter uses a different column name
+      When the engineer chooses TEM and its corresponding Raw Data column
+      Then Wafer ID and Die Seq are not offered as parameters
+      And the engineer can run the analysis without renaming TEM
+
+    Scenario: Final data is not carded a second time
+      Given Raw Data already produced by the OCD software with a Card
+      When the engineer runs a Final match
+      Then trend and bias data use the supplied Raw Data directly
+
+  Rule: A workbook can be reopened without copying the tables again
+
+    Scenario: Reopen a saved matching workbook
+      Given a completed matching workbook with multiple parameters
+      And the engineer has resized the input, mapping, and result sections
+      And the engineer has reordered the parameter cards
+      When the engineer saves and reopens the WKB file
+      Then the Reference table, Raw Data, mappings, and analysis settings are restored
+      And the saved section layout is restored
+      And the saved parameter order is restored
+
+    Scenario: Keep saving to the current workbook path
+      Given the engineer has saved or opened a Match Workbook
+      When the engineer saves the workbook again
+      Then the current WKB file is replaced without asking for another path
+      And Save As can choose a different WKB file for later saves
+
+    Scenario: Compare absolute and percentage bias in one review
+      Given DP and EW have valid Reference and Raw Data mappings
+      And both absolute and percentage bias are selected
+      When the engineer runs a Preview match
+      Then each Card result is shown beside its parameter mapping
+      And DP and EW each have a separate plot card in vertical order
+      And Match, Trend, absolute bias, and percentage bias use one unclipped horizontal row
+      And all four plots fit the visible workbook without horizontal scrolling
+      And each Match plot is 340 pixels wide
+      And Trend and bias plots share the remaining width evenly
+      And every primary plot is 330 pixels high
+      And each Match plot has a reserved heading with its Raw Data column and fitted equation with R squared to the right
+      And the reserved heading ends above the Match curve and data points
+      And Trend labels the blue solid line PMISH and the orange solid line with the Match Type
+      And Match labels PMISH horizontally and the Match Type vertically
+      And Trend and Bias omit the redundant Wafer axis title
+      And the three plot frames align with equal-weight edges
+      And Bias reports nanometres and percentage points without scale multipliers
+      And no parameter selector is required
+
+    Scenario: Inspect a smaller region of a result plot
+      Given a completed Match Workbook analysis has visible result plots
+      When the engineer drags a selection box inside one plot
+      Then that plot zooms to the selected region
+      And every plot keeps a complete four-sided axis frame
+
+    Scenario: Review single-wafer quality separately from parameter plots
+      Given KLA or NOVA Raw Data contains Wafer ID, Lot ID, PAD Name, and Die Seq
+      When the engineer runs the analysis
+      Then All parameter plots and Single-wafer metrics are separate result tabs
+      And single-wafer groups use the same identity rules as Wafer Map
+      And changing Lot or PAD creates a separate multi-line wafer label
+
+    Scenario: Highlight a poor fit
+      Given a completed analysis contains fitted Card metrics
+      When a Slope is outside 0.9 through 1.1 or R squared is below 0.9
+      Then the affected value is shown with a red warning treatment
+      And an explanation identifies the failed threshold
+
+    Scenario: Reopen both selected bias views
+      Given a completed matching workbook with both bias views selected
+      When the engineer saves and reopens the WKB file
+      Then absolute and percentage bias are both restored
+
+  Rule: Repeated clipboard runs stay in one compact workspace
+
+    Scenario: Undo a replaced input table
+      Given Reference and Raw Data have already been pasted
+      When the engineer replaces either input table and undoes the change
+      Then the previous table is restored
+      And its parameter mappings are restored with it
+
+    Scenario: Keep mappings while Raw Data is temporarily missing
+      Given Reference parameters have valid Raw Data mappings
+      When the engineer clears the Raw Data table
+      Then the Reference parameter mappings remain visible and selected
+      And the engineer is prompted to paste Raw Data and fix missing columns
+
+    Scenario: Select every Reference parameter for mapping
+      Given the Reference table contains several parameter candidates
+      When the engineer selects all mappings
+      Then every parameter candidate is selected
+      And any missing Raw Data column is clearly reported
+
+    Scenario: Re-run automatically after the first manual analysis
+      Given Reference and Raw Data are mapped in the Preview tab
+      And the engineer has run the analysis once
+      When the engineer edits Reference, Raw Data, or a parameter mapping
+      Then the current data is analyzed automatically
+      And the result remains in the same scrollable workspace
+      And the engineer's resized section layout remains unchanged
+
+    Scenario: Re-run after changing a Raw Data mapping
+      Given the engineer has completed the first manual analysis
+      When a mapped parameter is changed to another valid Raw Data column
+      Then the analysis updates automatically
+      And the engineer's section layout and parameter order remain unchanged
+
+    Scenario: Run analysis keeps a manually resized workspace
+      Given the engineer has dragged the input, mapping, and result boundaries
+      When the engineer runs the analysis
+      Then the two upper boundaries stay at the positions chosen by the engineer
+
+    Scenario: Choose Preview or Final from the top mode tabs
+      Given a completed Preview analysis with a resized workspace
+      When the engineer selects the Final tab
+      Then Final is used as the result mode
+      And the Reference, mappings, results, and section layout remain available
+      And Final has its own Raw Data input instead of reusing Preview Raw Data
+      And only the Final Wafer Map, Radius, and Dynamic actions are shown at the top right
+
+    Scenario: Choose whether Trend displays Card-adjusted values
+      Given a completed match contains Raw Data and a fitted Card
+      When the engineer changes the Card choice on a Trend plot
+      Then PMISH changes between the original Raw Data and Card-adjusted values
+      And the Reference comparison remains visible
+
+    Scenario: Keep one parameter at the top of the result area
+      Given exactly one mapped parameter has been analyzed
+      When the engineer reviews All parameter plots
+      Then the parameter plot card starts at the top without an empty gap
+
+    Scenario: Reorder parameter cards for review
+      Given several mapped parameters have been analyzed
+      When the engineer drags one parameter card above another
+      Then all parameter results follow the chosen order
+      And the chosen order is kept when the workbook is reopened
+
+    Scenario: Use the compact workbook menu
+      Given the Match Workbook is open
+      Then file actions, Match Type, and Bias choices are available from the menu bar
+      And no duplicate workbook heading or settings panel consumes the workspace
+
+    Scenario: Reopen a recently used workbook
+      Given matching-analysis.wkb was opened successfully
+      When the engineer returns to Match Workbook later
+      Then matching-analysis.wkb is available from the recent workbook list
+      And choosing it opens that workbook directly
+
+    Scenario: Locate the current workbook on disk
+      Given matching-analysis.wkb is the current saved workbook
+      When the engineer asks to reveal the workbook
+      Then the operating system opens its folder with matching-analysis.wkb selected
+
+    Scenario: Compare workbook Reference and Raw Data correlations
+      Given a Match Workbook has mapped Reference and Raw Data parameters
+      When the engineer opens Correlation and Trend from the active mode
+      Then the standard Correlation and Trend workspace opens with separate Ref Data and Raw Data tabs
+      And each data tab has its own wafer and parameter choices
+      And each wafer choice shows the real measurement identity instead of the data source name
+      And Raw Data keeps all original columns
+      And Reference measurement identity is aligned row by row from Raw Data
+      And correlations are fitted only within their own source table
+      And all Reference plots precede all Raw Data plots
+      And Reference plots are orange while Raw Data plots are blue
+      And Trend uses the same Reference-first source order and colours
+
+    Scenario: Reopen drawn Correlation and Trend without selecting again
+      Given Preview Correlation and Trend has independent Ref and Raw choices
+      And the engineer has drawn selected Correlation fits and Trend curves once
+      When the analysis window or its saved WKB is closed and reopened
+      Then the surviving sidebar choices and selected plot boxes are restored
+      And Correlation and Trend redraw automatically
+      And Final keeps a separate selection state from Preview
+
+    Scenario: Repair duplicate headers in every editable data table
+      Given an editable Reference or Raw Data table has duplicate row-1 names
+      When the engineer uses Auto rename in the visible warning
+      Then only the repeated headers receive unique numeric suffixes
+      And the measurement rows remain unchanged
+
+    Scenario: Show explanatory guidance only when requested
+      Given a workspace section has explanatory guidance
+      When the engineer views the workspace
+      Then the section title is shown without a persistent annotation row
+      And hovering the section title shows the same guidance
+      And data status, warnings, errors, and empty-state feedback remain visible
+
+    Scenario: Keep dialogs free of usage explanations
+      Given a grouped workbook is open
+      When the engineer opens Group settings, Manage groups, or Data selection
+      Then the dialog shows its controls without explanatory paragraphs
+      But row counts, warnings, and validation messages remain visible
+
+    Scenario: Stack several column filters in Data selection
+      Given the Data selection dialog is open
+      When the engineer adds two conditions to one filter row and joins them with OR
+      And adds a second row joined to the first with AND
+      Then the visible rows follow (row one) AND (row two)
+      And the status reports the full boolean expression
+      When the engineer removes one condition
+      Then the remaining rows keep their connectors
+      And Clear filters removes every filter
+
+  Rule: Match rows and FullMap rows have separate responsibilities
+
+    Scenario: Reopen an edited KLA or NOVA map from the workbook
+      Given a KLA or NOVA workbook whose Map starts from matching Raw Data
+      When the engineer edits the Map table and saves the WKB file
+      Then reopening the WKB restores the edited Map table exactly
+      And no separate Map file is required
+
+    Scenario: Keep TEM Map data separate from matching Raw Data
+      Given a TEM workbook has matching Raw Data but no Map table
+      When the engineer opens the wafer workspace
+      Then the Map table is empty instead of copying matching Raw Data
+      And Map data entered later is restored from the saved WKB file
+
+    Scenario: Apply a TEM Card to a later Preview FullMap
+      Given a Card fitted from a small TEM match
+      And a separate Preview FullMap with wafer coordinates
+      When the engineer opens the Preview wafer workspace
+      Then the fitted Card is applied to every mapped FullMap parameter
+      And the wafer identifiers and coordinates are preserved
+
+    Scenario: Restore Map and Dynamic choices after restarting the workbook
+      Given Preview Map has only CD_Bot selected
+      And Preview Dynamic has only SPA selected
+      When the Matching Workbook is saved, closed, and reopened
+      Then Preview Map still has only CD_Bot selected
+      And Preview Dynamic still has only SPA selected
+
+    Scenario: Open Final FullMap without applying Card again
+      Given Final Raw Data already produced by the OCD software with a Card
+      When the engineer opens the Final wafer workspace
+      Then the Final parameter values are used directly
+      And the existing Wafer Map and Radius Plot workspace is reused
+
+    Scenario: Reopen Preview and Final Dynamic data independently
+      Given Preview and Final have different Dynamic tables
+      When the engineer saves and reopens the WKB file
+      Then the Preview Dynamic table is restored exactly
+      And the Final Dynamic table is restored exactly
+
+    Scenario: Reopen a stage workspace without selecting parameters again
+      Given parameters are selected in a Preview Dynamic or Wafer Map workspace
+      When the engineer closes and reopens that Preview workspace
+      Then parameters still present in its data remain selected
+      And the corresponding analysis refreshes immediately
+
+    Scenario: Close a workbook-managed workspace without discarding edits
+      Given a Wafer Map or Dynamic workspace was opened from a saved Match Workbook
+      And its table has been edited
+      When the engineer closes that workspace
+      Then no discard-edits confirmation is shown
+      And the edited table is saved into the current WKB file
+      But an independently opened workspace still confirms before discarding edits
+
+    Scenario: Close a Match Workbook with its analysis workspaces
+      Given Wafer Map, Dynamic, and Correlation are open from a saved Match Workbook
+      And the Map and Dynamic tables contain current edits
+      When the engineer closes the Match Workbook
+      Then the current Map and Dynamic tables are saved into that WKB file
+      And all three analysis workspaces close with the Match Workbook
+
+    Scenario: Follow workbook edits in KLA and NOVA
+      Given KLA or NOVA is selected and its Wafer Map and Correlation windows are open
+      When the engineer edits the Raw Data in the Match Workbook
+      Then the Wafer Map and Correlation windows show the updated data
+      But a window whose table the engineer edited keeps that edit
+
+    Scenario: Keep the Dynamic table independent
+      Given a Dynamic window was opened from a Match Workbook
+      When the engineer edits the Raw Data in that workbook
+      Then the Dynamic table keeps the values it was opened with
+      And the engineer's own Dynamic edits are saved with the WKB
+
+    Scenario: Choose whether a workspace applies the parameter Cards
+      Given a Wafer Map or Dynamic window was opened from a Match Workbook
+      Then its Data tab shows the values as they were loaded
+      And a Card option is available but not ticked
+      When the engineer ticks Card
+      Then the mapped parameters are plotted and analysed with slope × value + intercept
+      But the table itself keeps the loaded values
+      When the engineer clears Card
+      Then the plots return to the loaded values
+
+    Scenario: Keep TEM tables independent and single
+      Given TEM is selected
+      When the engineer opens the Wafer Map, Dynamic and Correlation windows
+      Then all three stay open
+      And pressing one of those buttons again reuses its own window
+      And the Correlation and Trend window follows Raw Data edits
+      But the TEM Wafer Map table is never overwritten from Raw Data
+
+  Rule: A grouped trend reads in one clear order
+
+    Scenario: Read a grouped trend in the original row order
+      Given a grouped workbook whose Lot ID varies inside each wafer
+      When the engineer chooses Original row order and draws the trend
+      Then the curves keep the original input row order
+      And the thin dashed lines mark wafer boundaries only
+
+    Scenario: Choose the trend order without the removed table order
+      Given a grouped workbook is open
+      Then Trend order offers Group → wafer → Die Seq and Original row order
+      And a workbook saved with the removed Current table order reopens as Original row order
+
+    Scenario: Classify every wafer with at most one freely named Mark
+      Given a workbook with TestFlag values
+      When the engineer opens Marks…
+      Then the first Mark catches wafers without an explicit assignment and is marked with ✓
+      And the engineer can add Marks and rename any Mark without fixed dropdown values
+      When the engineer assigns a measurement set to another Mark
+      Then that wafer carries exactly one Mark
+      When the engineer deletes that Mark
+      Then its wafers return to the first Mark
+      And the Order table and plots use the surviving Mark name
+
+    Scenario: Group by Mark when no TestFlag was entered
+      Given a workbook whose Order table has no TestFlag values
+      When the engineer enables Mark and applies the group settings
+      Then the groups follow the Mark classification alone
+      And the group names are the Mark names
+      When the engineer also disables Mark
+      Then the workbook has no groups
+
+  Rule: Source edits preserve participation
+
+    # Executed by tests.test_performance_regressions.WorkbookPerformanceTests.
+    Scenario: Keep excluded source rows when classification is disabled
+      Given Head groups and Mark are disabled
+      And Data selection excludes records in the middle and at the end of Raw Data
+      When the engineer clears the cells of either excluded record
+      Then the source row count and participation identities are unchanged
+      And the record remains excluded from analysis
+      When the engineer undoes the clear
+      Then the original values and exclusions are restored
+      When the engineer clears both excluded records before undoing either clear
+      Then each record retains its distinct participation identity
+      And both records remain excluded without disabling the analysis
+
+    Scenario: Reopen a source table with an empty final record
+      Given the final Raw Data record has been cleared but not deleted
+      And Data selection excludes that record
+      When the engineer saves and reopens the workbook
+      Then the empty record retains its position in Raw Data
+      And it remains excluded from analysis
+
+  Rule: Approved results can leave the workbook
+
+    # Executed by test_export_immediately_after_edit_uses_current_data_and_card.
+    Scenario: Export immediately after editing Raw Data
+      Given a completed analysis with a fitted Card
+      When the engineer edits Raw Data and exports before the queued analysis runs
+      Then the exported source values and Summary use the same current revision
+      And the analysis keeps the applied Group settings
+
+    Scenario: Export a customer-facing result
+      Given a completed Preview or Final analysis
+      When the engineer exports the result
+      Then the workbook contains Summary, Reference, Raw Data, and result sheets
+      And each analysis plot is saved as a separate image file
+
+  Rule: Large sources retain their analysis and editing behavior
+
+    # Executed by test_correlation_checkbox_changes_keep_exact_sources_and_are_prompt.
+    Scenario: Change independent Correlation source choices
+      Given 6000 paired records split across 600 wafers and three parameters
+      When the engineer unchecks and checks a Raw Data wafer or parameter
+      Then the Reference choices remain selected independently
+      And every remaining grouped row and available plot box belongs to the selected source
+      And plotting still waits for Draw selected
+
+    # Executed by test_saved_correlation_restores_complete_grouped_plots_promptly.
+    Scenario: Restore a previously drawn grouped Correlation workspace
+      Given a saved Correlation workspace with 6000 records and drawn Correlation and Trend plots
+      When the engineer restores that workspace over Workbook-derived source tables
+      Then the source tables and Group keys are restored before the saved plots are drawn
+      And the selected boxes, active tab and fitted values are retained
+
+    # Executed by test_hidden_group_plots_show_latest_replacement_and_undo_without_blocking_edit.
+    Scenario: Review Groups after consecutive source updates
+      Given a grouped workbook with 6000 Raw Data records
+      And the engineer is reviewing All parameter plots
+      When the engineer replaces Raw Data three times
+      Then the analysis uses the most recent source values
+      And opening Group plots displays every Group using those values
+      When the engineer undoes the last replacement
+      Then the Group plots and exported image use the restored values
+
+    # Executed by test_performance_regressions: grouped Trend and measurement spans.
+    Scenario: Plot a wide source with many wafers
+      Given 9000 Raw Data records with 33 columns and ordered wafer measurements
+      When the engineer runs a grouped analysis
+      Then the Trend retains all expected Reference values and Die Seq labels
+      And measurement spans retain their stable Die Seq order
+
+    # Executed by test_large_plot_selection_preserves_disabled_cells_and_exact_choices_promptly.
+    Scenario: Restore exact plot choices in a large selection
+      Given 16000 plot choices with some choices unavailable for their source
+      When the engineer restores three exact choices and then clears the choices
+      Then unavailable choices remain unselected
+      And no plot choices remain selected
+
+    # Executed by managed dirty/Undo and post-load responsiveness probes.
+    Scenario: Edit a Correlation source after initialization
+      Given a Correlation analysis with 6000 source records
+      When the engineer updates a Raw Data value after opening the analysis
+      Then the updated value reaches the Trend data
+      And undoing the update restores the accepted source values
+      And parent-owned axis settings do not become child-local edits

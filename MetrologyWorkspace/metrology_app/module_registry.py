@@ -1,0 +1,137 @@
+"""Registration and creation of independently loadable desktop components."""
+
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass
+
+from PyQt6.QtWidgets import QWidget
+
+
+ComponentFactory = Callable[[], QWidget]
+
+
+@dataclass(frozen=True, slots=True)
+class ComponentSpec:
+    component_id: str
+    title: str
+    description: str
+    category: str
+    factory: ComponentFactory
+
+
+class ComponentRegistry:
+    """Keep the application shell independent from component implementations."""
+
+    def __init__(self):
+        self._components = {}
+
+    def register(self, spec):
+        if spec.component_id in self._components:
+            raise ValueError(f"Component is already registered: {spec.component_id}")
+        self._components[spec.component_id] = spec
+
+    def get(self, component_id):
+        try:
+            return self._components[component_id]
+        except KeyError as error:
+            raise ValueError(f"Unknown component: {component_id}") from error
+
+    def create(self, component_id):
+        widget = self.get(component_id).factory()
+        if not isinstance(widget, QWidget):
+            raise TypeError(f"Component {component_id!r} did not create a QWidget")
+        return widget
+
+    def __iter__(self) -> Iterator[ComponentSpec]:
+        return iter(self._components.values())
+
+    def __len__(self):
+        return len(self._components)
+
+
+def create_default_registry():
+    """Register built-in analysis workspaces without importing them at startup."""
+    registry = ComponentRegistry()
+
+    def create_card_matching():
+        from .matching_window import MatchingWindow
+        return MatchingWindow()
+
+    registry.register(ComponentSpec(
+        "card_matching",
+        "Match Workbook",
+        "Map Reference and Raw Data parameters, generate Cards, and review Preview or Final results.",
+        "OCD matching",
+        create_card_matching,
+    ))
+
+    def create_wafer_map():
+        from .window import MainWindow as WaferMapWindow
+        return WaferMapWindow()
+
+    registry.register(ComponentSpec(
+        "wafer_map",
+        "Wafer Map",
+        "Edit CSV, XLSX, or clipboard data, then draw wafer maps and signed-radius plots.",
+        "Metrology analysis",
+        create_wafer_map,
+    ))
+
+    def create_spectra_viewer():
+        from .spectra_viewer import SpectraViewerWindow
+        return SpectraViewerWindow()
+
+    registry.register(ComponentSpec(
+        "spectra_viewer",
+        "Spectra Viewer",
+        "Load SME spectra, compare channels, and inspect measurement points by wafer.",
+        "Metrology analysis",
+        create_spectra_viewer,
+    ))
+
+    def create_correlation_analysis():
+        from .correlation_window import CorrelationWindow
+        return CorrelationWindow()
+
+    registry.register(ComponentSpec(
+        "correlation_analysis",
+        "Correlation and Trend",
+        "Fit numeric columns in pairs, rank them by R², and plot Die Seq trends.",
+        "Statistical analysis",
+        create_correlation_analysis,
+    ))
+
+    def create_dynamic_analysis():
+        from .dynamic_window import DynamicWindow
+        return DynamicWindow()
+
+    registry.register(ComponentSpec(
+        "dynamic_analysis",
+        "Dynamic",
+        "Review repeated die measurements by Cycle and compare per-die sample 3σ.",
+        "Repeatability analysis",
+        create_dynamic_analysis,
+    ))
+
+    def create_auto_weighting_writer():
+        from .auto_weighting_window import AutoWeightingWindow
+        return AutoWeightingWindow()
+
+    registry.register(ComponentSpec(
+        "auto_weighting_writer", "AutoWeighting Writer",
+        "Recognize screenshots locally, review parameter and Multiple Step tables, and export Excel.",
+        "Offline screenshot tools", create_auto_weighting_writer,
+    ))
+
+    def create_ref_summary():
+        from .ref_summary_window import RefSummaryWindow
+        return RefSummaryWindow()
+
+    registry.register(ComponentSpec(
+        "summarize_ref", "Summarize REF",
+        "Combine KLA, NOVA or PMISH REF files, preview records, and export summary Excel by PAD.",
+        "Reference data tools", create_ref_summary,
+    ))
+    return registry
+
+
+__all__ = ["ComponentRegistry", "ComponentSpec", "create_default_registry"]

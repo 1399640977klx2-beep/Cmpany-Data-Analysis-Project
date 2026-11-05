@@ -1,0 +1,62 @@
+# Local measurement data and version backups
+/Data for Test/
+/Version Review/
+/MetrologyWorkspace/sample_data/
+/MetrologyWorkspace/docs/validation/
+backup/
+backups/
+*.bak
+*.backup
+*.old
+*~
+
+# Python environments, caches, and generated builds
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+release/
+*.egg-info/
+*.log
+qa_*.png
+
+# Machine-specific settings and credentials
+.vscode/
+.idea/
+.codex/
+.agents/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+/MetrologyWorkspace/config/
+
+# Workbooks, measurements, database files, and archives
+*.wkb
+*.mwkb
+*.sme
+*.xlsx
+*.xls
+*.csv
+*.tsv
+*.sqlite
+*.sqlite3*
+*.db
+*.zip
+*.7z
+*.rar
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.cache/
+settings.yaml
+config/settings.yaml
+config/reminders.sqlite3*
+reminders.sqlite3*
+*.log
+qa_*.png
+build/
+dist/
+release/
+*.egg-info/
+.DS_Store
+*.wkb
